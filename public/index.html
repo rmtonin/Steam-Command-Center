@@ -7,75 +7,55 @@
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-<main class="dock-shell">
+<main class="dashboard">
   <header class="topbar">
-    <div class="brand">
-      <span class="brand-mark" aria-hidden="true">◉</span>
-      <div><small>STREAM COMMAND</small><h1>Live Control</h1></div>
-    </div>
-    <div class="header-actions">
-      <span id="obs-status" data-state="disconnected">OBS disconnected</span>
-      <button id="settings" class="icon-button" type="button" aria-label="Settings" title="Settings">•••</button>
-    </div>
+    <div class="brand"><span class="pulse"></span><strong>LIVE CONTROL</strong></div>
+    <div class="header-actions"><span id="obs-status" data-state="disconnected">OBS disconnected</span><button id="settings" class="round-button" type="button" aria-label="Settings">•••</button></div>
   </header>
 
   <p id="error" class="error-toast" hidden></p>
 
-  <section class="glass-card live-summary">
-    <div class="live-copy">
+  <section class="hero glass">
+    <div class="hero-main">
       <span id="live" class="live-state">○ STANDBY</span>
-      <div class="viewer-total"><strong id="total">0</strong><span>viewers</span></div>
+      <div class="hero-number"><strong id="total">0</strong><span>VIEWERS</span></div>
     </div>
-    <div class="session-block"><span>Session</span><strong id="time">00:00:00</strong></div>
+    <svg class="hero-chart chart" viewBox="0 0 220 48" preserveAspectRatio="none" aria-hidden="true"><polyline id="total-chart" points="0,42 220,42"/></svg>
+    <div class="session"><span>SESSION</span><strong id="time">00:00:00</strong></div>
   </section>
 
-  <section class="platform-grid">
-    <article class="glass-card platform twitch">
-      <div class="platform-heading"><span class="platform-dot"></span><div><small>TWITCH</small><strong id="tw-state">Not configured</strong></div></div>
-      <div class="compact-metrics">
-        <label><span>Watching</span><strong id="tw-viewers">0</strong></label>
-        <label><span>Followers</span><strong id="tw-followers">0</strong></label>
-      </div>
-      <p id="tw-title" class="stream-title"></p>
+  <section class="platform-row">
+    <article class="platform-card glass twitch-card">
+      <div class="logo twitch-logo" aria-label="Twitch logo"><svg viewBox="0 0 24 24"><path d="M4 2h18v13l-5 5h-4l-3 3v-3H4V2zm2 2v14h6v2l2-2h3l3-3V4H6zm5 3h2v6h-2V7zm5 0h2v6h-2V7z"/></svg></div>
+      <div class="platform-data"><span id="tw-state">OFFLINE</span><strong id="tw-viewers">0</strong><small>WATCHING</small></div>
+      <div class="secondary-stat"><strong id="tw-followers">0</strong><span>FOLLOWERS</span></div>
+      <svg class="mini-chart chart" viewBox="0 0 160 34" preserveAspectRatio="none" aria-hidden="true"><polyline id="twitch-chart" points="0,29 160,29"/></svg>
+      <p id="tw-title" hidden></p>
     </article>
 
-    <article class="glass-card platform youtube">
-      <div class="platform-heading"><span class="platform-dot"></span><div><small>YOUTUBE</small><strong id="yt-state">Not configured</strong></div></div>
-      <div class="compact-metrics">
-        <label><span>Watching</span><strong id="yt-viewers">0</strong></label>
-        <label><span>Subscribers</span><strong id="yt-subs">0</strong></label>
-      </div>
-      <div class="youtube-footer"><small id="yt-mode">No event selected</small><button id="find-youtube-event" class="mini-button" type="button">Find event</button></div>
-      <p id="yt-title" class="stream-title"></p>
+    <article class="platform-card glass youtube-card">
+      <div class="logo youtube-logo" aria-label="YouTube logo"><svg viewBox="0 0 24 24"><path d="M23 7.2s-.2-1.7-.9-2.4c-.9-.9-1.9-.9-2.4-1C16.4 3.5 12 3.5 12 3.5s-4.4 0-7.7.3c-.5.1-1.5.1-2.4 1C1.2 5.5 1 7.2 1 7.2S.7 9.2.7 11.1v1.8c0 2 .3 3.9.3 3.9s.2 1.7.9 2.4c.9.9 2.1.9 2.6 1 1.9.2 7.5.3 7.5.3s4.4 0 7.7-.3c.5-.1 1.5-.1 2.4-1 .7-.7.9-2.4.9-2.4s.3-2 .3-3.9v-1.8c0-2-.3-3.9-.3-3.9zM9.8 15.6V8.8l6 3.4-6 3.4z"/></svg></div>
+      <div class="platform-data"><span id="yt-state">OFFLINE</span><strong id="yt-viewers">0</strong><small>WATCHING</small></div>
+      <div class="secondary-stat"><strong id="yt-subs">0</strong><span>SUBSCRIBERS</span></div>
+      <svg class="mini-chart chart" viewBox="0 0 160 34" preserveAspectRatio="none" aria-hidden="true"><polyline id="youtube-chart" points="0,29 160,29"/></svg>
+      <button id="find-youtube-event" class="event-button" type="button" aria-label="Find next YouTube event">↻</button>
+      <span id="yt-mode" hidden>No event selected</span><p id="yt-title" hidden></p>
     </article>
   </section>
 
-  <article class="glass-card health-card">
-    <div class="health-heading"><div><small>OBS HEALTH</small><strong>Output telemetry</strong></div><button id="refresh" class="mini-button" type="button">Refresh</button></div>
-    <div class="health-grid">
-      <label><span>FPS</span><strong id="fps">0</strong></label>
-      <label><span>CPU</span><strong id="cpu">0%</strong></label>
-      <label><span>Memory</span><strong id="memory">0 MB</strong></label>
-      <label><span>Render</span><strong id="render">0%</strong></label>
-      <label><span>Encode</span><strong id="encode">0%</strong></label>
-      <label><span>Output</span><strong id="output">Stopped</strong></label>
-    </div>
-  </article>
+  <section class="obs-panel glass">
+    <div class="obs-logo" aria-label="OBS logo"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="29"/><path d="M31 8c10 0 18 8 18 18 0 2-.4 4-1 6-2-6-7-10-14-10-5 0-10 3-12 8-5-3-8-8-8-14 0-3 1-6 2-8 4 0 9 0 15 0zm18 26c5 9 2 20-7 25-2 1-4 2-6 2 4-5 5-12 1-18-3-5-8-8-14-8 0-6 3-12 8-15 3-2 6-2 9-2 2 4 5 9 9 16zM29 58C19 58 11 50 11 40c0-2 .4-4 1-6 2 6 7 10 14 10 5 0 10-3 12-8 5 3 8 8 8 14 0 3-1 6-2 8-5 0-10 0-15 0z"/></svg></div>
+    <div class="gauge"><span>FPS</span><strong id="fps">0</strong><i style="--value:100"></i></div>
+    <div class="gauge"><span>CPU</span><strong id="cpu">0%</strong><i id="cpu-gauge" style="--value:0"></i></div>
+    <div class="gauge"><span>MEM</span><strong id="memory">0 MB</strong><i id="memory-gauge" style="--value:0"></i></div>
+    <div class="metric-stack"><label><span>RENDER</span><strong id="render">0%</strong></label><label><span>ENCODE</span><strong id="encode">0%</strong></label></div>
+    <div class="output-state"><span>OUTPUT</span><strong id="output">Stopped</strong></div>
+    <svg class="obs-chart chart" viewBox="0 0 230 30" preserveAspectRatio="none" aria-hidden="true"><polyline id="obs-chart" points="0,25 230,25"/></svg>
+    <button id="refresh" class="refresh-button" type="button" aria-label="Refresh statistics">↻</button>
+  </section>
 </main>
 
-<dialog id="modal">
-  <form id="form">
-    <div class="dialog-heading"><div><small>LOCAL CONFIGURATION</small><h2>Dashboard settings</h2></div><button id="close" class="icon-button" type="button" aria-label="Close">×</button></div>
-    <div class="form-grid">
-      <label>Twitch channel login<input id="twitch-channel" placeholder="example_streamer"></label>
-      <label>YouTube channel ID<input id="youtube-channel-id" placeholder="UC..."></label>
-      <label>OBS WebSocket URL<input id="url" value="ws://127.0.0.1:4455"></label>
-      <label>OBS password<input id="password" type="password"></label>
-      <label>Refresh interval<input id="poll" type="number" min="5" value="10"></label>
-    </div>
-    <div class="dialog-actions"><button id="clear" class="secondary-button" type="button">Clear saved settings</button><button class="primary-button">Save and reconnect</button></div>
-  </form>
-</dialog>
+<dialog id="modal"><form id="form"><div class="dialog-heading"><strong>SETTINGS</strong><button id="close" class="round-button" type="button">×</button></div><div class="form-grid"><label>Twitch channel<input id="twitch-channel" placeholder="example_streamer"></label><label>YouTube channel ID<input id="youtube-channel-id" placeholder="UC..."></label><label>OBS WebSocket URL<input id="url" value="ws://127.0.0.1:4455"></label><label>OBS password<input id="password" type="password"></label><label>Refresh seconds<input id="poll" type="number" min="5" value="10"></label></div><div class="dialog-actions"><button id="clear" type="button">Clear</button><button>Save and reconnect</button></div></form></dialog>
 <script type="module" src="/app.js"></script>
 </body>
 </html>

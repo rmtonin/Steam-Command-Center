@@ -1,6 +1,6 @@
 # Stream Command Center
 
-> Current release: v0.8
+> Current release: v0.9
 
 A small self-hosted dashboard for monitoring an OBS session alongside Twitch and YouTube. It is designed to run as a Docker container on a home server and to be opened as an OBS custom browser dock.
 
@@ -20,6 +20,8 @@ The web interface listens on port `6767`.
 
 
 ## Interface size and appearance
+
+Version 0.9 prioritizes glance readability: large numbers, platform logos, circular OBS gauges, and short history graphs replace most secondary text.
 
 The main dashboard is designed for a `600 × 400` OBS custom dock. It uses a compact dark translucent interface with rounded floating surfaces, restrained color, thin highlights, and clear foreground hierarchy. The layout does not need vertical scrolling at the target dock size.
 
