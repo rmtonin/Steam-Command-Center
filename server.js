@@ -1,5 +1,5 @@
 /**
- * Stream Command Center v0.6
+ * Stream Command Center v0.7
  *
  * The YouTube event is selected manually from the dashboard. Pressing
  * "Find next YouTube event" searches the configured channel for public,
@@ -302,5 +302,5 @@ const server = http.createServer(async (request, response) => {
 });
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`Stream Command Center v0.6 listening on port ${PORT}`);
+  console.log(`Stream Command Center v0.7 listening on port ${PORT}`);
 });
