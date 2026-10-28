@@ -1,92 +1,22 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Stream Command Center</title>
-    <link rel="stylesheet" href="/styles.css">
-  </head>
-  <body>
-    <main class="dashboard">
-      <header class="topbar">
-        <div>
-          <p class="eyebrow">LIVE OPERATIONS</p>
-          <h1>Stream Command Center</h1>
-        </div>
-        <div class="topbar-actions">
-          <span id="obs-status" class="connection-status">OBS disconnected</span>
-          <button id="open-settings" type="button">OBS settings</button>
-        </div>
-      </header>
-
-      <p id="error-message" class="error-message" hidden></p>
-
-      <section class="hero-card">
-        <div>
-          <span id="live-state" class="live-state">○ STANDBY</span>
-          <h2 id="total-viewers">0</h2>
-          <p>combined live viewers</p>
-        </div>
-        <div class="session-clock">
-          <span>Session time</span>
-          <strong id="session-time">00:00:00</strong>
-          <small id="last-updated">Waiting for platform data</small>
-        </div>
-      </section>
-
-      <section class="platform-grid">
-        <article class="card twitch-card">
-          <p class="eyebrow">TWITCH</p>
-          <h3 id="twitch-state">Not configured</h3>
-          <div class="metric-grid two-columns">
-            <div class="metric"><span>Watching</span><strong id="twitch-viewers">0</strong></div>
-            <div class="metric"><span>Followers</span><strong id="twitch-followers">0</strong></div>
-          </div>
-          <p id="twitch-title" class="platform-title"></p>
-        </article>
-
-        <article class="card youtube-card">
-          <p class="eyebrow">YOUTUBE</p>
-          <h3 id="youtube-state">Not configured</h3>
-          <div class="metric-grid two-columns">
-            <div class="metric"><span>Watching</span><strong id="youtube-viewers">0</strong></div>
-            <div class="metric"><span>Subscribers</span><strong id="youtube-subscribers">0</strong></div>
-          </div>
-          <p id="youtube-title" class="platform-title"></p>
-        </article>
-      </section>
-
-      <article class="card">
-        <div class="card-heading">
-          <div><p class="eyebrow">OBS HEALTH</p><h3>Encoding and rendering</h3></div>
-          <button id="refresh-now" type="button">Refresh</button>
-        </div>
-        <div class="metric-grid health-grid">
-          <div class="metric"><span>Active FPS</span><strong id="fps">0.0</strong></div>
-          <div class="metric"><span>CPU</span><strong id="cpu">0%</strong></div>
-          <div class="metric"><span>Memory</span><strong id="memory">0 MB</strong></div>
-          <div class="metric"><span>Render lag</span><strong id="render-lag">0.00%</strong></div>
-          <div class="metric"><span>Encoding lag</span><strong id="encoding-lag">0.00%</strong></div>
-          <div class="metric"><span>Output</span><strong id="output-state">Stopped</strong></div>
-        </div>
-      </article>
-    </main>
-
-    <dialog id="settings-dialog">
-      <form id="settings-form">
-        <div class="card-heading">
-          <div><p class="eyebrow">LOCAL SETTINGS</p><h3>OBS WebSocket</h3></div>
-          <button id="close-settings" type="button">Close</button>
-        </div>
-        <label>WebSocket URL<input id="obs-url" required></label>
-        <label>Password<input id="obs-password" type="password"></label>
-        <label>Refresh interval in seconds<input id="refresh-seconds" type="number" min="5" required></label>
-        <button class="primary-button" type="submit">Save and reconnect</button>
-        <button id="clear-settings" class="danger-button" type="button">Clear saved OBS settings</button>
-        <p class="help-text">The OBS password is stored only in this browser dock.</p>
-      </form>
-    </dialog>
-
-    <script type="module" src="/js/app.js"></script>
-  </body>
-</html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Stream Command Center</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<main>
+  <header><div><small>LIVE OPERATIONS</small><h1>Stream Command Center</h1></div><button id="settings">OBS settings</button></header>
+  <p id="error" hidden></p>
+  <section class="hero"><div><b id="live">○ STANDBY</b><h2 id="total">0</h2><span>combined viewers</span></div><div class="right"><span>Session time</span><h3 id="time">00:00:00</h3></div></section>
+  <section class="grid">
+    <article><small>TWITCH</small><h3 id="tw-state">Not configured</h3><div class="metrics"><label>Watching<strong id="tw-viewers">0</strong></label><label>Followers<strong id="tw-followers">0</strong></label></div><p id="tw-title"></p></article>
+    <article><small>YOUTUBE</small><h3 id="yt-state">Not configured</h3><div class="metrics"><label>Watching<strong id="yt-viewers">0</strong></label><label>Subscribers<strong id="yt-subs">0</strong></label></div><p id="yt-title"></p><small id="yt-mode">No event selected</small><button id="find-youtube-event" type="button">Find next YouTube event</button></article>
+  </section>
+  <article><div class="heading"><div><small>OBS HEALTH</small><h3>Encoding and rendering</h3></div><button id="refresh">Refresh</button></div><div class="health"><label>FPS<strong id="fps">0</strong></label><label>CPU<strong id="cpu">0%</strong></label><label>Memory<strong id="memory">0 MB</strong></label><label>Render lag<strong id="render">0%</strong></label><label>Encoding lag<strong id="encode">0%</strong></label><label>Output<strong id="output">Stopped</strong></label></div></article>
+</main>
+<dialog id="modal"><form id="form"><h3>Dashboard settings</h3><label>Twitch channel login<input id="twitch-channel" placeholder="example_streamer"></label><label>YouTube channel ID<input id="youtube-channel-id" placeholder="UC..."></label><hr><h4>OBS WebSocket</h4><label>URL<input id="url" value="ws://127.0.0.1:4455"></label><label>Password<input id="password" type="password"></label><label>Refresh seconds<input id="poll" type="number" min="5" value="10"></label><button>Save and reconnect</button><button id="clear" type="button">Clear saved settings</button><button id="close" type="button">Close</button></form></dialog>
+<script type="module" src="/app.js"></script>
+</body></html>

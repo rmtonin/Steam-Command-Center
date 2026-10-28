@@ -1,12 +1,9 @@
 /**
- * Stream Command Center HTTP server
+ * Stream Command Center v0.6
  *
- * Responsibilities:
- * 1. Serve the static dashboard files from /public.
- * 2. Fetch Twitch and YouTube metrics without exposing API secrets to the browser.
- * 3. Listen on port 6767 by default.
- *
- * No external Node packages are required.
+ * The YouTube event is selected manually from the dashboard. Pressing
+ * "Find next YouTube event" searches the configured channel for public,
+ * scheduled broadcasts and stores the nearest one in /data/selection.json.
  */
 
 import fs from "node:fs";
@@ -15,92 +12,102 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const PORT = Number(process.env.PORT || 6767);
-const CURRENT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
-const PUBLIC_DIRECTORY = path.join(CURRENT_DIRECTORY, "public");
+const ROOT = path.dirname(fileURLToPath(import.meta.url));
+const PUBLIC_DIR = path.join(ROOT, "public");
+const DATA_DIR = process.env.DATA_DIRECTORY || path.join(ROOT, "data");
+const SELECTION_FILE = path.join(DATA_DIR, "selection.json");
 
 const MIME_TYPES = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".png": "image/png",
-  ".svg": "image/svg+xml"
+  ".json": "application/json; charset=utf-8"
 };
 
-let twitchToken = {
-  value: "",
-  expiresAt: 0
-};
+const twitchToken = { value: "", expiresAt: 0 };
+
+function sendJson(response, status, value) {
+  response.writeHead(status, {
+    "Content-Type": MIME_TYPES[".json"],
+    "Cache-Control": "no-store"
+  });
+  response.end(JSON.stringify(value));
+}
+
+function sendText(response, status, value) {
+  response.writeHead(status, { "Content-Type": "text/plain; charset=utf-8" });
+  response.end(value);
+}
 
 async function fetchJson(url, options = {}) {
   const response = await fetch(url, options);
+  const body = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    throw new Error(body?.error?.message || `HTTP ${response.status}`);
   }
 
-  return response.json();
+  return body;
 }
 
-async function getTwitchAccessToken() {
-  const now = Date.now();
+function readSelection() {
+  try {
+    return JSON.parse(fs.readFileSync(SELECTION_FILE, "utf8"));
+  } catch {
+    return { videoId: "", title: "", scheduledStartTime: "" };
+  }
+}
 
-  if (twitchToken.value && now < twitchToken.expiresAt - 60_000) {
+function saveSelection(selection) {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.writeFileSync(SELECTION_FILE, JSON.stringify(selection, null, 2));
+}
+
+async function getTwitchToken() {
+  if (twitchToken.value && Date.now() < twitchToken.expiresAt - 60_000) {
     return twitchToken.value;
   }
 
-  const parameters = new URLSearchParams({
+  const query = new URLSearchParams({
     client_id: process.env.TWITCH_CLIENT_ID,
     client_secret: process.env.TWITCH_CLIENT_SECRET,
     grant_type: "client_credentials"
   });
+  const result = await fetchJson(`https://id.twitch.tv/oauth2/token?${query}`, {
+    method: "POST"
+  });
 
-  const data = await fetchJson(
-    `https://id.twitch.tv/oauth2/token?${parameters}`,
-    { method: "POST" }
-  );
-
-  twitchToken = {
-    value: data.access_token,
-    expiresAt: now + data.expires_in * 1000
-  };
-
+  twitchToken.value = result.access_token;
+  twitchToken.expiresAt = Date.now() + result.expires_in * 1000;
   return twitchToken.value;
 }
 
-async function fetchTwitchMetrics() {
+async function getTwitchMetrics(channel) {
   const clientId = process.env.TWITCH_CLIENT_ID;
   const clientSecret = process.env.TWITCH_CLIENT_SECRET;
-  const channel = process.env.TWITCH_CHANNEL;
-
   if (!clientId || !clientSecret || !channel) {
     return { configured: false, live: false };
   }
 
-  const accessToken = await getTwitchAccessToken();
+  const accessToken = await getTwitchToken();
   const headers = {
     "Client-Id": clientId,
     Authorization: `Bearer ${accessToken}`
   };
-
-  const twitchApi = async (url) => fetchJson(url, { headers });
-
-  const userResult = await twitchApi(
+  const twitchGet = (url) => fetchJson(url, { headers });
+  const user = await twitchGet(
     `https://api.twitch.tv/helix/users?login=${encodeURIComponent(channel)}`
   );
-  const broadcasterId = userResult.data?.[0]?.id;
+  const broadcasterId = user.data?.[0]?.id;
 
-  if (!broadcasterId) {
-    throw new Error("Twitch channel was not found");
-  }
+  if (!broadcasterId) throw new Error("Twitch channel not found");
 
   const [streamResult, followerResult] = await Promise.all([
-    twitchApi(`https://api.twitch.tv/helix/streams?user_id=${broadcasterId}`),
-    twitchApi(
+    twitchGet(`https://api.twitch.tv/helix/streams?user_id=${broadcasterId}`),
+    twitchGet(
       `https://api.twitch.tv/helix/channels/followers?broadcaster_id=${broadcasterId}`
     )
   ]);
-
   const stream = streamResult.data?.[0];
 
   return {
@@ -112,157 +119,188 @@ async function fetchTwitchMetrics() {
   };
 }
 
-async function fetchYouTubeMetrics() {
+async function findNearestUpcomingYouTubeEvent(channelId) {
   const apiKey = process.env.YOUTUBE_API_KEY;
-  const liveVideoId = process.env.YOUTUBE_LIVE_VIDEO_ID;
-  const channelId = process.env.YOUTUBE_CHANNEL_ID;
+  if (!apiKey || !channelId) {
+    throw new Error("YouTube API key and channel ID are required");
+  }
 
-  if (!apiKey || !liveVideoId) {
+  const query = new URLSearchParams({
+    part: "snippet",
+    channelId,
+    eventType: "upcoming",
+    type: "video",
+    order: "date",
+    maxResults: "25",
+    key: apiKey
+  });
+  const result = await fetchJson(
+    `https://www.googleapis.com/youtube/v3/search?${query}`
+  );
+  const events = (result.items || [])
+    .map((item) => ({
+      videoId: item.id?.videoId || "",
+      title: item.snippet?.title || "",
+      scheduledStartTime: item.snippet?.publishedAt || ""
+    }))
+    .filter((item) => item.videoId)
+    .sort((a, b) => new Date(a.scheduledStartTime) - new Date(b.scheduledStartTime));
+
+  if (!events.length) {
+    throw new Error("No public upcoming YouTube event was found for this channel");
+  }
+
+  // Fetch the video resource because it has the authoritative scheduled start time.
+  const detailsQuery = new URLSearchParams({
+    part: "snippet,liveStreamingDetails",
+    id: events[0].videoId,
+    key: apiKey
+  });
+  const details = await fetchJson(
+    `https://www.googleapis.com/youtube/v3/videos?${detailsQuery}`
+  );
+  const video = details.items?.[0];
+  const selection = {
+    videoId: video?.id || events[0].videoId,
+    title: video?.snippet?.title || events[0].title,
+    scheduledStartTime:
+      video?.liveStreamingDetails?.scheduledStartTime || events[0].scheduledStartTime,
+    selectedAt: new Date().toISOString()
+  };
+
+  saveSelection(selection);
+  return selection;
+}
+
+async function getYouTubeMetrics(channelId) {
+  const apiKey = process.env.YOUTUBE_API_KEY;
+  const selection = readSelection();
+
+  if (!apiKey || !channelId) {
     return { configured: false, live: false };
   }
 
-  const videoParameters = new URLSearchParams({
-    part: "snippet,liveStreamingDetails",
-    id: liveVideoId,
+  const channelQuery = new URLSearchParams({
+    part: "statistics",
+    id: channelId,
     key: apiKey
   });
-
-  const videoResult = await fetchJson(
-    `https://www.googleapis.com/youtube/v3/videos?${videoParameters}`
+  const channelResult = await fetchJson(
+    `https://www.googleapis.com/youtube/v3/channels?${channelQuery}`
+  );
+  const subscribers = Number(
+    channelResult.items?.[0]?.statistics?.subscriberCount || 0
   );
 
-  const video = videoResult.items?.[0];
-  const liveDetails = video?.liveStreamingDetails || {};
-  let subscribers = 0;
-
-  if (channelId) {
-    const channelParameters = new URLSearchParams({
-      part: "statistics",
-      id: channelId,
-      key: apiKey
-    });
-
-    const channelResult = await fetchJson(
-      `https://www.googleapis.com/youtube/v3/channels?${channelParameters}`
-    );
-
-    subscribers = Number(
-      channelResult.items?.[0]?.statistics?.subscriberCount || 0
-    );
-  }
-
-  return {
-    configured: true,
-    live: Boolean(liveDetails.actualStartTime && !liveDetails.actualEndTime),
-    viewers: Number(liveDetails.concurrentViewers || 0),
-    subscribers,
-    title: video?.snippet?.title || ""
-  };
-}
-
-async function handlePlatformApi(response) {
-  const results = await Promise.allSettled([
-    fetchTwitchMetrics(),
-    fetchYouTubeMetrics()
-  ]);
-
-  const normalizeResult = (result, platformName) => {
-    if (result.status === "fulfilled") {
-      return result.value;
-    }
-
+  if (!selection.videoId) {
     return {
       configured: true,
       live: false,
-      error: `${platformName}: ${result.reason.message}`
+      viewers: 0,
+      subscribers,
+      title: "Press Find next YouTube event",
+      selectedEvent: null
     };
-  };
-
-  sendJson(response, 200, {
-    twitch: normalizeResult(results[0], "Twitch"),
-    youtube: normalizeResult(results[1], "YouTube")
-  });
-}
-
-function sendJson(response, statusCode, data) {
-  response.writeHead(statusCode, {
-    "Content-Type": MIME_TYPES[".json"],
-    "Cache-Control": "no-store"
-  });
-  response.end(JSON.stringify(data));
-}
-
-function sendText(response, statusCode, message) {
-  response.writeHead(statusCode, {
-    "Content-Type": "text/plain; charset=utf-8"
-  });
-  response.end(message);
-}
-
-function getStaticFilePath(requestUrl) {
-  // Parse only the pathname. This makes both / and /?reset=1 serve index.html.
-  const parsedUrl = new URL(requestUrl, "http://localhost");
-  const pathname = decodeURIComponent(parsedUrl.pathname);
-  const relativePath = pathname === "/" ? "index.html" : pathname.slice(1);
-  const filePath = path.resolve(PUBLIC_DIRECTORY, relativePath);
-
-  // Prevent requests such as /../../etc/passwd from escaping /public.
-  if (!filePath.startsWith(`${PUBLIC_DIRECTORY}${path.sep}`)) {
-    return null;
   }
 
-  return filePath;
+  const videoQuery = new URLSearchParams({
+    part: "snippet,liveStreamingDetails",
+    id: selection.videoId,
+    key: apiKey
+  });
+  const result = await fetchJson(
+    `https://www.googleapis.com/youtube/v3/videos?${videoQuery}`
+  );
+  const video = result.items?.[0];
+  const live = video?.liveStreamingDetails || {};
+
+  return {
+    configured: true,
+    live: Boolean(live.actualStartTime && !live.actualEndTime),
+    viewers: Number(live.concurrentViewers || 0),
+    subscribers,
+    title: video?.snippet?.title || selection.title,
+    selectedEvent: {
+      videoId: selection.videoId,
+      scheduledStartTime: live.scheduledStartTime || selection.scheduledStartTime
+    }
+  };
 }
 
-function serveStaticFile(requestUrl, response) {
-  const filePath = getStaticFilePath(requestUrl);
+function normalize(result, platform) {
+  return result.status === "fulfilled"
+    ? result.value
+    : { configured: true, live: false, error: `${platform}: ${result.reason.message}` };
+}
 
-  if (!filePath || !fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+async function handlePlatforms(response, url) {
+  const twitchChannel = url.searchParams.get("twitchChannel")?.trim() || "";
+  const youtubeChannelId = url.searchParams.get("youtubeChannelId")?.trim() || "";
+  const results = await Promise.allSettled([
+    getTwitchMetrics(twitchChannel),
+    getYouTubeMetrics(youtubeChannelId)
+  ]);
+  sendJson(response, 200, {
+    twitch: normalize(results[0], "Twitch"),
+    youtube: normalize(results[1], "YouTube")
+  });
+}
+
+async function handleYouTubeSelection(response, url) {
+  try {
+    const youtubeChannelId = url.searchParams.get("youtubeChannelId")?.trim() || "";
+    const selection = await findNearestUpcomingYouTubeEvent(youtubeChannelId);
+    sendJson(response, 200, { ok: true, selection });
+  } catch (error) {
+    sendJson(response, 400, { ok: false, error: error.message });
+  }
+}
+
+function resolveStaticFile(requestUrl) {
+  const parsed = new URL(requestUrl, "http://localhost");
+  const pathname = decodeURIComponent(parsed.pathname);
+  const relative = pathname === "/" ? "index.html" : pathname.slice(1);
+  const file = path.resolve(PUBLIC_DIR, relative);
+  return file.startsWith(`${PUBLIC_DIR}${path.sep}`) ? file : null;
+}
+
+function serveStatic(requestUrl, response) {
+  const file = resolveStaticFile(requestUrl);
+  if (!file || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
     sendText(response, 404, "Not found");
     return;
   }
 
-  const extension = path.extname(filePath).toLowerCase();
   response.writeHead(200, {
-    "Content-Type": MIME_TYPES[extension] || "application/octet-stream"
+    "Content-Type": MIME_TYPES[path.extname(file)] || "application/octet-stream"
   });
-
-  const fileStream = fs.createReadStream(filePath);
-
-  fileStream.on("error", (error) => {
-    console.error("Static file error:", error);
-
-    if (!response.headersSent) {
-      sendText(response, 500, "Internal server error");
-    } else {
-      response.destroy(error);
-    }
-  });
-
-  fileStream.pipe(response);
+  const stream = fs.createReadStream(file);
+  stream.on("error", (error) => response.destroy(error));
+  stream.pipe(response);
 }
 
 const server = http.createServer(async (request, response) => {
   try {
-    const parsedUrl = new URL(request.url, "http://localhost");
+    const url = new URL(request.url, "http://localhost");
 
-    if (parsedUrl.pathname === "/api/platforms") {
-      await handlePlatformApi(response);
+    if (request.method === "GET" && url.pathname === "/api/platforms") {
+      await handlePlatforms(response, url);
       return;
     }
 
-    serveStaticFile(request.url, response);
-  } catch (error) {
-    console.error("Request error:", error);
-
-    if (!response.headersSent) {
-      sendJson(response, 500, { error: "Internal server error" });
-    } else {
-      response.destroy(error);
+    if (request.method === "POST" && url.pathname === "/api/youtube/select-upcoming") {
+      await handleYouTubeSelection(response, url);
+      return;
     }
+
+    serveStatic(request.url, response);
+  } catch (error) {
+    console.error(error);
+    if (!response.headersSent) sendJson(response, 500, { error: "Internal server error" });
+    else response.destroy(error);
   }
 });
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`Stream Command Center is running on port ${PORT}`);
+  console.log(`Stream Command Center v0.6 listening on port ${PORT}`);
 });

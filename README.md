@@ -1,86 +1,69 @@
-# Stream Command Center v0.3
+# Stream Command Center v0.6
 
-Docker-hosted dashboard for OBS, Twitch, and YouTube. It listens on port **6767**.
+Docker-hosted OBS, Twitch, and YouTube dashboard on port **6767**.
 
-## Important fixes in v0.3
+## Changes in v0.6
 
-- Query strings such as `/?reset=1` no longer break the HTTP server.
-- Static-file errors are handled instead of producing an empty response.
-- OBS authentication no longer depends on `crypto.subtle`, which may be unavailable on a plain-HTTP LAN address.
-- OBS close codes are displayed as readable diagnostic messages.
-- A **Clear saved OBS settings** button is included.
-- JavaScript is split into readable, commented modules.
+- `TWITCH_CHANNEL` is no longer a Docker/Portainer variable.
+- `YOUTUBE_CHANNEL_ID` is no longer a Docker/Portainer variable.
+- Both channel values are now entered in the dashboard's **OBS settings** menu.
+- Channel settings are stored in the browser dock's local storage together with the OBS connection settings.
+- API credentials remain server-side in Portainer.
 
-## Upload to GitHub
+## GitHub upload
 
-1. Create a new empty GitHub repository.
-2. Extract this project.
-3. Upload the contents of this folder to the repository root.
-4. Do not upload a real `.env` file. `.gitignore` already excludes it.
+Upload the contents of this folder to the root of your GitHub repository. The repository root should contain `compose.yml`, `Dockerfile`, `server.js`, and the `public` folder.
 
-Expected repository structure:
+Do not upload a real `.env` file.
 
-```text
-public/
-  js/
-    app.js
-    obs-client.js
-    sha256.js
-  index.html
-  styles.css
-.env.example
-.gitignore
-compose.yml
-Dockerfile
-package.json
-README.md
-server.js
-```
+## Portainer variables
 
-## Deploy from GitHub with Portainer
-
-1. In Portainer, open **Stacks > Add stack**.
-2. Name the stack `stream-command-center`.
-3. Select **Git repository**.
-4. Paste the GitHub repository URL.
-5. Use `refs/heads/main` as the repository reference if the branch is `main`.
-6. Set the Compose path to `compose.yml`.
-7. If the repository is private, enable authentication and provide a GitHub token with read access.
-8. Add the environment variables below in Portainer.
-9. Select **Deploy the stack**.
+Only these API credentials remain in Portainer:
 
 ```text
 TWITCH_CLIENT_ID=
 TWITCH_CLIENT_SECRET=
-TWITCH_CHANNEL=
 YOUTUBE_API_KEY=
-YOUTUBE_LIVE_VIDEO_ID=
-YOUTUBE_CHANNEL_ID=
 ```
 
-Open the dashboard at:
+Remove these old variables from the Portainer stack if they are still present:
 
 ```text
-http://YOUR-SERVER-IP:6767/
+TWITCH_CHANNEL
+YOUTUBE_CHANNEL_ID
+YOUTUBE_LIVE_VIDEO_ID
 ```
 
-## Add the dashboard to OBS
+## Redeploy from GitHub
 
-1. Open **View > Docks > Custom Browser Docks**.
-2. Add `http://YOUR-SERVER-IP:6767/`.
-3. Open **OBS settings** inside the dashboard.
-4. Keep the default URL `ws://127.0.0.1:4455`.
-5. Enter the exact password shown in **Tools > WebSocket Server Settings**.
-6. Select **Save and reconnect**.
+1. Push v0.6 to the configured GitHub repository.
+2. Open the stack in Portainer.
+3. Pull the latest Git revision and redeploy/rebuild the stack.
+4. Open `http://YOUR-SERVER-IP:6767/`.
+5. Open **OBS settings** in the dashboard.
+6. Enter your Twitch login name, YouTube channel ID, OBS WebSocket URL, and OBS password.
+7. Select **Save and reconnect**.
 
-If it fails, the dashboard now displays the OBS close code. Code 4009 means the password was rejected.
+## Channel value formats
 
-## Updating through Portainer
+Twitch channel login:
 
-After pushing a change to GitHub, open the stack in Portainer and use its Git update/redeploy option to pull the latest repository revision and rebuild the container.
+```text
+example_streamer
+```
+
+Do not enter the full Twitch URL.
+
+YouTube channel ID:
+
+```text
+UCxxxxxxxxxxxxxxxxxxxxxx
+```
+
+## YouTube event selection
+
+After saving the YouTube channel ID, press **Find next YouTube event**. The selected event remains in the Docker volume across container restarts.
 
 ## Security
 
-- Keep OBS WebSocket authentication enabled.
-- Do not expose port 4455 to the internet.
-- Keep API credentials in Portainer environment variables, not in GitHub.
+The channel names are not secrets and are stored locally in the browser. Twitch Client Secret and YouTube API Key remain server-side in Portainer and are never returned to the browser.
