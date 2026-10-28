@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Stream Command Center</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<main class="dock-shell">
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">◉</span>
+      <div><small>STREAM COMMAND</small><h1>Live Control</h1></div>
+    </div>
+    <div class="header-actions">
+      <span id="obs-status" data-state="disconnected">OBS disconnected</span>
+      <button id="settings" class="icon-button" type="button" aria-label="Settings" title="Settings">•••</button>
+    </div>
+  </header>
+
+  <p id="error" class="error-toast" hidden></p>
+
+  <section class="glass-card live-summary">
+    <div class="live-copy">
+      <span id="live" class="live-state">○ STANDBY</span>
+      <div class="viewer-total"><strong id="total">0</strong><span>viewers</span></div>
+    </div>
+    <div class="session-block"><span>Session</span><strong id="time">00:00:00</strong></div>
+  </section>
+
+  <section class="platform-grid">
+    <article class="glass-card platform twitch">
+      <div class="platform-heading"><span class="platform-dot"></span><div><small>TWITCH</small><strong id="tw-state">Not configured</strong></div></div>
+      <div class="compact-metrics">
+        <label><span>Watching</span><strong id="tw-viewers">0</strong></label>
+        <label><span>Followers</span><strong id="tw-followers">0</strong></label>
+      </div>
+      <p id="tw-title" class="stream-title"></p>
+    </article>
+
+    <article class="glass-card platform youtube">
+      <div class="platform-heading"><span class="platform-dot"></span><div><small>YOUTUBE</small><strong id="yt-state">Not configured</strong></div></div>
+      <div class="compact-metrics">
+        <label><span>Watching</span><strong id="yt-viewers">0</strong></label>
+        <label><span>Subscribers</span><strong id="yt-subs">0</strong></label>
+      </div>
+      <div class="youtube-footer"><small id="yt-mode">No event selected</small><button id="find-youtube-event" class="mini-button" type="button">Find event</button></div>
+      <p id="yt-title" class="stream-title"></p>
+    </article>
+  </section>
+
+  <article class="glass-card health-card">
+    <div class="health-heading"><div><small>OBS HEALTH</small><strong>Output telemetry</strong></div><button id="refresh" class="mini-button" type="button">Refresh</button></div>
+    <div class="health-grid">
+      <label><span>FPS</span><strong id="fps">0</strong></label>
+      <label><span>CPU</span><strong id="cpu">0%</strong></label>
+      <label><span>Memory</span><strong id="memory">0 MB</strong></label>
+      <label><span>Render</span><strong id="render">0%</strong></label>
+      <label><span>Encode</span><strong id="encode">0%</strong></label>
+      <label><span>Output</span><strong id="output">Stopped</strong></label>
+    </div>
+  </article>
+</main>
+
+<dialog id="modal">
+  <form id="form">
+    <div class="dialog-heading"><div><small>LOCAL CONFIGURATION</small><h2>Dashboard settings</h2></div><button id="close" class="icon-button" type="button" aria-label="Close">×</button></div>
+    <div class="form-grid">
+      <label>Twitch channel login<input id="twitch-channel" placeholder="example_streamer"></label>
+      <label>YouTube channel ID<input id="youtube-channel-id" placeholder="UC..."></label>
+      <label>OBS WebSocket URL<input id="url" value="ws://127.0.0.1:4455"></label>
+      <label>OBS password<input id="password" type="password"></label>
+      <label>Refresh interval<input id="poll" type="number" min="5" value="10"></label>
+    </div>
+    <div class="dialog-actions"><button id="clear" class="secondary-button" type="button">Clear saved settings</button><button class="primary-button">Save and reconnect</button></div>
+  </form>
+</dialog>
+<script type="module" src="/app.js"></script>
+</body>
+</html>
