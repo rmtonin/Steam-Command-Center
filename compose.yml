@@ -1,6 +1,8 @@
 services:
   stream-command-center:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: stream-command-center
     restart: unless-stopped
     ports:
