@@ -250,12 +250,12 @@ async function refreshObs() {
 
     $("cpu").textContent = `${Number(stats.cpuUsage || 0).toFixed(1)}%`;
     $("memory").textContent = `${Number(stats.memoryUsage || 0).toFixed(0)} MB`;
-    $("render").textContent = `R ${(
+    $("render").textContent = `${(
       stats.renderTotalFrames
         ? (stats.renderSkippedFrames / stats.renderTotalFrames) * 100
         : 0
     ).toFixed(2)}%`;
-    $("encode").textContent = `E ${(
+    $("encode").textContent = `${(
       stats.outputTotalFrames
         ? (stats.outputSkippedFrames / stats.outputTotalFrames) * 100
         : 0
@@ -278,9 +278,9 @@ async function refreshPlatforms() {
     );
 
     $("tw-viewers").textContent = formatNumber(data.twitch.viewers);
-    $("tw-followers").textContent = `♟ ${formatNumber(data.twitch.followers)}`;
+    $("tw-followers").textContent = formatNumber(data.twitch.followers);
     $("yt-viewers").textContent = formatNumber(data.youtube.viewers);
-    $("yt-subs").textContent = `♟ ${formatNumber(data.youtube.subscribers)}`;
+    $("yt-subs").textContent = formatNumber(data.youtube.subscribers);
     $("tw-light").classList.toggle("online", Boolean(data.twitch.live));
     $("yt-light").classList.toggle("online", Boolean(data.youtube.live));
     $("total").textContent = formatNumber(

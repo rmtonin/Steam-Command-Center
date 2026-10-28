@@ -2,6 +2,12 @@
 
 Stream Command Center is a compact, self-hosted dashboard for monitoring a Twitch and YouTube livestream alongside OBS Studio statistics. The interface is designed for a 600 × 400 OBS custom browser dock, but it can also be opened from a normal browser on the local network.
 
+## Current release
+
+Current release: `1.0.2`
+
+This patch removes duplicate follower/subscriber symbols and repairs the compact render/encode metric layout while preserving the existing dashboard design.
+
 ## Features
 
 - Combined Twitch and YouTube viewer count
